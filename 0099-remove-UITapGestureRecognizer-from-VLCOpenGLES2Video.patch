@@ -1,0 +1,83 @@
+From 41c15d5addcd878a753f2ce83bf95a943fe8a793 Mon Sep 17 00:00:00 2001
+From: beardedfoo <773275+beardedfoo@users.noreply.github.com>
+Date: Sun, 7 Mar 2021 20:28:41 +0100
+Subject: [PATCH] remove UITapGestureRecognizer from VLCOpenGLES2VideoView
+
+---
+ modules/video_output/ios.m | 36 ------------------------------------
+ 1 file changed, 36 deletions(-)
+
+diff --git a/modules/video_output/ios.m b/modules/video_output/ios.m
+index 26f84667ea..484ce32fdb 100644
+--- a/modules/video_output/ios.m
++++ b/modules/video_output/ios.m
+@@ -100,7 +100,6 @@ @interface VLCOpenGLES2VideoView : UIView {
+     BOOL _placeInvalidated;
+
+     UIView *_viewContainer;
+-    UITapGestureRecognizer *_tapRecognizer;
+
+     /* Written from MT, read locked from vout */
+     vout_display_place_t _place;
+@@ -492,20 +491,10 @@ - (BOOL)fetchViewContainer
+
+         [_viewContainer addSubview:self];
+
+-        /* add tap gesture recognizer for DVD menus and stuff */
+-        _tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self
+-                                                                 action:@selector(tapRecognized:)];
+-        if (_viewContainer.window
+-         && _viewContainer.window.rootViewController
+-         && _viewContainer.window.rootViewController.view)
+-            [_viewContainer.superview addGestureRecognizer:_tapRecognizer];
+-        _tapRecognizer.cancelsTouchesInView = NO;
+         return YES;
+     } @catch (NSException *exception) {
+         msg_Err(_voutDisplay, "Handling the view container failed due to an Obj-C exception (%s, %s", [exception.name UTF8String], [exception.reason UTF8String]);
+         vout_display_sys_t *sys = _voutDisplay->sys;
+-        if (_tapRecognizer)
+-            [_tapRecognizer release];
+         return NO;
+     }
+ }
+@@ -514,9 +503,6 @@ - (void)cleanAndReleaseFromMainThread
+ {
+     [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+-    [_tapRecognizer.view removeGestureRecognizer:_tapRecognizer];
+-    [_tapRecognizer release];
+-
+     [self removeFromSuperview];
+     [_viewContainer release];
+
+@@ -712,28 +698,6 @@ - (void)reshape
+     vlc_mutex_unlock(&_mutex);
+ }
+
+-- (void)tapRecognized:(UITapGestureRecognizer *)tapRecognizer
+-{
+-    vlc_mutex_lock(&_mutex);
+-    if (!_voutDisplay)
+-    {
+-        vlc_mutex_unlock(&_mutex);
+-        return;
+-    }
+-
+-    UIGestureRecognizerState state = [tapRecognizer state];
+-    CGPoint touchPoint = [tapRecognizer locationInView:self];
+-    CGFloat scaleFactor = self.contentScaleFactor;
+-    vout_display_SendMouseMovedDisplayCoordinates(_voutDisplay, ORIENT_NORMAL,
+-                                                  (int)touchPoint.x * scaleFactor, (int)touchPoint.y * scaleFactor,
+-                                                  &_place);
+-
+-    vout_display_SendEventMousePressed(_voutDisplay, MOUSE_BUTTON_LEFT);
+-    vout_display_SendEventMouseReleased(_voutDisplay, MOUSE_BUTTON_LEFT);
+-
+-    vlc_mutex_unlock(&_mutex);
+-}
+-
+ - (void)updateVoutCfg:(const vout_display_cfg_t *)cfg withVGL:(vout_display_opengl_t *)vgl
+ {
+     if (memcmp(&_cfg, cfg, sizeof(vout_display_cfg_t)) == 0)
+--
+2.24.3 (Apple Git-128)
